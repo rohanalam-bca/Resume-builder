@@ -1,0 +1,256 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Admin Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background: linear-gradient(to right, #eef2f3, #ffffff);
+      }
+
+      /* HEADER */
+      .header {
+        background: linear-gradient(135deg, #1c3a5e, #2a5298);
+        color: white;
+        padding: 18px;
+        text-align: center;
+        font-size: 22px;
+        letter-spacing: 1px;
+        font-weight: bold;
+      }
+
+      /* CONTAINER */
+      .container {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* CARDS */
+      .cards {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .card {
+        flex: 1;
+        min-width: 390px;
+        padding: 25px;
+        border-radius: 15px;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        transition: 0.3s;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+      }
+
+      /* CARD COLORS */
+      .card.users {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+      }
+
+      .card.resumes {
+        background: linear-gradient(135deg, #43e97b, #38f9d7);
+      }
+
+      .card h2 {
+        font-size: 32px;
+        margin-bottom: 5px;
+      }
+
+      .card p {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      /* CHART */
+      .chart-container {
+        margin-top: 30px;
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        margin: 30px auto;
+        width: 100%;
+        max-width: 800px;
+      }
+       
+    canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+      .table-container {
+        margin-top: 30px;
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        margin: 10px auto;
+        width: 100%;
+        max-width: 800px;
+      }
+
+      .chart-title {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #333;
+        font-weight: bold;
+      }
+
+      .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      .user-table th {
+        background: #1c3a5e;
+        color: white;
+        padding: 10px;
+        text-align: left;
+      }
+
+      .user-table td {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+      }
+
+      .user-table tr:hover {
+        background: #f5f7fa;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="header">📊 Resume Builder Admin Dashboard</div>
+
+    <div class="container">
+      <!-- CARDS -->
+      <div class="cards">
+        <div class="card users">
+          <h2 id="users">0</h2>
+          <p>Total Users</p>
+        </div>
+
+        <div class="card resumes">
+
+          <h2 id="todayResumes">0</h2>
+          <p>Today's Resumes</p>
+        </div>
+      </div>
+
+      <!-- CHART -->
+      <div class="chart-container">
+        <div class="chart-title">Template Usage Analytics</div>
+        <canvas id="templateChart"></canvas>
+      </div>
+      <div class="table-container">
+        <div class="chart-title">Recent Users</div>
+        <table class="user-table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Joined At</th>
+            </tr>
+            </thead>
+            <tbody id="userTableBody">
+            <!-- User rows will be injected here -->
+            </tbody>
+        </div>    
+    </div>
+
+    <script>
+      fetch("/dashboard-data")
+        .then((res) => res.json())
+        .then((data) => {
+          // Update cards
+          document.getElementById("users").innerText = data.users;
+          document.getElementById("todayResumes").innerText = data.today_resumes;
+
+          // Prepare chart data
+          const labels = data.templates.map((t) => "Template " + t.template);
+          const values = data.templates.map((t) => t.count);
+
+          new Chart(document.getElementById("templateChart"), {
+            type: "bar",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: "Template Usage",
+                  data: values,
+                  backgroundColor: [
+                    "#4facfe",
+                    "#00f2fe",
+                    "#43e97b",
+                    "#38f9d7",
+                    "#fa709a",
+                    "#fee140",
+                  ],
+                  borderRadius: 8,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  labels: {
+                    color: "#333",
+                    font: { size: 14 },
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#555" },
+                  grid: { display: false },
+                },
+                y: {
+                  ticks: { color: "#555" },
+                  grid: { color: "#eee" },
+                },
+              },
+            },
+          });
+
+          // ✅ FIX: USER TABLE (INSIDE fetch)
+          const tableBody = document.getElementById("userTableBody");
+          tableBody.innerHTML = "";
+
+          data.users_list.forEach((user) => {
+            const row = `
+            <tr>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.phone}</td>
+                <td>${user.created_at}</td>
+            </tr>
+        `;
+            tableBody.innerHTML += row;
+          });
+        })
+        .catch((err) => {
+          console.error("Dashboard error:", err);
+        });
+    </script>
+  </body>
+</html>

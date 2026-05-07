@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeForge — Professional Resume Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">R</div>
+    Resume<span>Forge</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="resetForm()">🔄 Reset</button>
+    <button class="btn btn-primary" onclick="generateResume()">✨ Generate</button>
+    <button class="btn btn-success" onclick="downloadPDF()" id="downloadBtn" style="display:none">⬇️ PDF</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" onclick="switchTab('form',this)">📝 Form</button>
+      <button class="sidebar-tab" onclick="switchTab('template',this)">🎨 Template</button>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar-wrap">
+      <div class="progress-label">
+        <span>Form completion</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- FORM TAB -->
+    <div id="tab-form" class="form-body">
+
+      <!-- PERSONAL INFO -->
+      <div class="form-section">
+        <div class="section-header open" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">👤</span> Personal Info</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body open">
+          <!-- Photo Upload -->
+          <div class="form-group">
+            <label>Profile Photo</label>
+            <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+              <img id="photoPreview" class="photo-preview" src="" alt="">
+              <div class="photo-placeholder" id="photoPlaceholder">
+                <span>📷</span>Click to upload photo
+              </div>
+            </div>
+            <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Full Name <span class="req">*</span></label>
+              <input type="text" id="f-name" placeholder="John Doe" oninput="updateProgress()">
+              <div class="error-msg" id="err-name">Name is required</div>
+            </div>
+            <div class="form-group">
+              <label>Profession</label>
+              <input type="text" id="f-profession" placeholder="e.g. Full Stack Developer">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Phone <span class="req">*</span></label>
+              <input type="tel" id="f-phone" placeholder="+91 9876543210" oninput="updateProgress()">
+              <div class="error-msg" id="err-phone">Valid phone required</div>
+            </div>
+            <div class="form-group">
+              <label>Email <span class="req">*</span></label>
+              <input type="email" id="f-email" placeholder="john@example.com" oninput="updateProgress()">
+              <div class="error-msg" id="err-email">Valid email required</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>LinkedIn URL</label>
+            <input type="url" id="f-linkedin" placeholder="linkedin.com/in/johndoe">
+          </div>
+          <div class="form-group">
+            <label>GitHub / Portfolio</label>
+            <input type="url" id="f-github" placeholder="github.com/johndoe">
+          </div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">📋</span> Career Summary</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="form-group">
+            <label>Objective / Summary</label>
+            <textarea id="f-summary" rows="4" placeholder="A passionate developer with..." maxlength="500" oninput="updateProgress()"></textarea>
+            <div style="font-size:0.72rem;color:var(--text2);text-align:right" id="summaryCount">0/500</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SKILLS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">⚡</span> Skills</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="skill-hint">Add any skills — technical or soft (e.g. Java, Excel, Leadership, Photoshop)</div>
+          <div id="skills-list" class="dynamic-list"></div>
+          <button class="add-btn" onclick="addSkill()">+ Add Skill</button>
+        </div>
+      </div>
+
+      <!-- PROJECTS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">🚀</span> Projects</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div id="projects-container"></div>
+          <button class="add-btn" onclick="addProject()">+ Add Project</button>
+        </div>
+      </div>
+
+      <!-- EDUCATION -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">🎓</span> Education</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text2);margin-bottom:8px">Class 10 <span class="req">*</span></div>
+          <div class="form-row">
+            <div class="form-group"><label>Board</label><input type="text" id="edu-10-board" placeholder="CBSE / State Board"></div>
+            <div class="form-group"><label>Year</label><input type="number" id="edu-10-year" placeholder="2020"></div>
+          </div>
+          <div class="form-group"><label>Percentage / CGPA</label><input type="text" id="edu-10-pct" placeholder="85% / 8.5 CGPA"></div>
+          
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text2);margin:12px 0 8px">Class 12 (Optional)</div>
+          <div class="form-row">
+            <div class="form-group"><label>Board</label><input type="text" id="edu-12-board" placeholder="CBSE / State Board"></div>
+            <div class="form-group"><label>Year</label><input type="number" id="edu-12-year" placeholder="2022"></div>
+          </div>
+          <div class="form-group"><label>Percentage / CGPA</label><input type="text" id="edu-12-pct" placeholder="80%"></div>
+
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text2);margin:12px 0 8px">Current Degree (Optional)</div>
+          <div class="form-row">
+            <div class="form-group"><label>Course</label><input type="text" id="edu-deg-course" placeholder="B.Tech CSE"></div>
+            <div class="form-group"><label>College</label><input type="text" id="edu-deg-college" placeholder="MIT, Pune"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Year</label><input type="number" id="edu-deg-year" placeholder="2026"></div>
+            <div class="form-group"><label>CGPA / %</label><input type="text" id="edu-deg-pct" placeholder="8.2 CGPA"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INTERNSHIPS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">💼</span> Internships</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div id="internships-container"></div>
+          <button class="add-btn" onclick="addInternship()">+ Add Internship</button>
+        </div>
+      </div>
+
+      <!-- ACHIEVEMENTS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">🏆</span> Achievements</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div id="achievements-list" class="dynamic-list"></div>
+          <button class="add-btn" onclick="addDynamicItem('achievements-list','Achievement (e.g. Won Hackathon 2024)')">+ Add Achievement</button>
+        </div>
+      </div>
+
+      <!-- CERTIFICATIONS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">📜</span> Certifications</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div id="certs-container"></div>
+          <button class="add-btn" onclick="addCert()">+ Add Certification</button>
+        </div>
+      </div>
+
+      <!-- SOFT SKILLS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">🤝</span> Soft Skills</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div id="softskills-list" class="dynamic-list"></div>
+          <button class="add-btn" onclick="addDynamicItem('softskills-list','e.g. Team Leadership')">+ Add Soft Skill</button>
+        </div>
+      </div>
+
+      <!-- EXTRA INFO -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><span class="section-icon">🌐</span> Additional Info</div>
+          <span class="section-chevron">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="form-group">
+            <label>Languages Known (comma-separated)</label>
+            <input type="text" id="f-langs" placeholder="English, Hindi, Bengali">
+          </div>
+          <div class="form-group">
+            <label>Hobbies (comma-separated)</label>
+            <input type="text" id="f-hobbies" placeholder="Photography, Chess, Coding">
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end tab-form -->
+
+    <!-- TEMPLATE TAB -->
+    <div id="tab-template" class="form-body" style="display:none">
+      <div class="template-grid" id="templateGrid"></div>
+    </div>
+
+    <!-- SIDEBAR ACTIONS -->
+    <div class="sidebar-actions">
+      <button class="btn btn-primary btn-lg" onclick="generateResume()">✨ Generate Resume</button>
+      <button class="btn btn-success btn-lg" onclick="downloadPDF()" id="downloadBtn2" style="display:none">⬇️ Download PDF</button>
+      <button class="btn btn-ghost btn-lg" onclick="resetForm()">🔄 Reset All</button>
+      <button onclick="fillTestData()" class="btn btn-primary">
+  ⚡ Auto Fill Test Data
+</button>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main-area">
+    <div class="preview-header">
+      <div>
+        <div class="preview-title">Resume Preview</div>
+        <div class="preview-subtitle">Fill the form and click "Generate Resume" to preview</div>
+      </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📄</div>
+      <div class="empty-title">Your Resume Awaits</div>
+      <div class="empty-sub">Fill in the form on the left and click "Generate Resume" to see your professional resume instantly.</div>
+    </div>
+
+    <!-- RESUME CONTAINER -->
+    <div class="resume-wrapper" id="resumeWrapper" style="display:none">
+      <div id="resumeOutput"></div>
+    </div>
+  </main>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- // ═══════════════════════════════════════════
+//  STATE
+// ═════════════════════════════════════════ -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
